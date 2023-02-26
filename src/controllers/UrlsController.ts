@@ -20,6 +20,11 @@ class UrlsController {
       res.status(500).json(message);
     }
   }
+  async getById(req: Request, res: Response) {
+    const data = res.locals.url;
+    delete data.createdAt;
+    res.send(data);
+  }
 }
 
 export default new UrlsController();
