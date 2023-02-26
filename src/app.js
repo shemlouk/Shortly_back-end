@@ -81,6 +81,39 @@ var UserController = class {
       res.status(500).json(message);
     }
   }
+  async getById(req, res) {
+    const { userId } = res.locals.session;
+    try {
+      const { rows } = await database_default.query(
+        `SELECT
+            users.id,
+            users.name,
+            COALESCE(sum("visitCount"), 0) AS "visitCount",
+            CASE
+              WHEN bool_or(urls.id IS NOT NULL)
+                THEN  json_agg(
+                        json_build_object(
+                          'id', urls.id,
+                          'shortUrl', urls."shortUrl",
+                          'url', urls.url,
+                          'visitCount', urls."visitCount"
+                        )
+                      )
+                ELSE array_to_json(array[]::json[])
+            END AS "shortenedUrls"
+        FROM users
+        LEFT JOIN urls
+        ON urls."userId" = users.id
+        WHERE users.id = $1
+        GROUP BY users.id, users.name`,
+        [userId]
+      );
+      res.send(rows[0]);
+    } catch ({ message }) {
+      console.log(message);
+      res.status(500).json(message);
+    }
+  }
 };
 var UsersController_default = new UserController();
 
@@ -146,12 +179,6 @@ var router3 = Router3();
 router3.post("/signin", validateBody_default, findUser_default, SessionsController_default.create);
 var SignIn_default = router3;
 
-// src/routes/Users.ts
-import { Router as Router4 } from "express";
-var router4 = Router4();
-router4.get("/users/me");
-var Users_default = router4;
-
 // src/middlewares/authentication.ts
 var authentication = async (req, res, next) => {
   const token = req.header("authorization")?.replace(/(Bearer )/g, "");
@@ -170,6 +197,12 @@ var authentication = async (req, res, next) => {
   }
 };
 var authentication_default = authentication;
+
+// src/routes/Users.ts
+import { Router as Router4 } from "express";
+var router4 = Router4();
+router4.get("/users/me", authentication_default, UsersController_default.getById);
+var Users_default = router4;
 
 // src/controllers/UrlsController.ts
 import { customAlphabet, urlAlphabet } from "nanoid";
@@ -198,7 +231,7 @@ var UrlsController = class {
   async openUrl(req, res) {
     const { id, url } = res.locals.url;
     await database_default.query(
-      'UPDATE urls SET "visitsCount" = "visitsCount" + 1 WHERE id = $1',
+      'UPDATE urls SET "visitCount" = "visitCount" + 1 WHERE id = $1',
       [id]
     );
     res.redirect(url);
