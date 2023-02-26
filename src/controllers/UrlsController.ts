@@ -6,13 +6,14 @@ const nanoid = customAlphabet(urlAlphabet, 8);
 
 class UrlsController {
   async create(req: Request, res: Response) {
+    const { userId } = res.locals.session;
     const { url } = req.body;
     const shortUrl = nanoid();
     try {
-      await db.query('INSERT INTO urls (url, "shortUrl") VALUES ($1, $2)', [
-        url,
-        shortUrl,
-      ]);
+      await db.query(
+        'INSERT INTO urls (url, "shortUrl", "userId") VALUES ($1, $2, $3)',
+        [url, shortUrl, userId]
+      );
       const { id } = (
         await db.query('SELECT id FROM urls WHERE "shortUrl" = $1', [shortUrl])
       ).rows[0];
@@ -23,10 +24,8 @@ class UrlsController {
     }
   }
   async getById(req: Request, res: Response) {
-    const data = res.locals.url;
-    delete data.createdAt;
-    delete data.visitsCount;
-    res.send(data);
+    const { id, url, shortUrl } = res.locals.url;
+    res.send({ id, url, shortUrl });
   }
   async openUrl(req: Request, res: Response) {
     const { id, url } = res.locals.url;
