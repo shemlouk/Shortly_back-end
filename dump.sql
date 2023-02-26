@@ -144,47 +144,39 @@ ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_
 -- Data for Name: sessions; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.sessions VALUES (1, '7ELZc1C1L8PgskpfcYQsy', 1, '2023-02-26 11:51:43.806655');
-INSERT INTO public.sessions VALUES (2, 'T5wux_S-1gEvpsHWAD-yc', 2, '2023-02-26 13:07:03.40155');
 
 
 --
 -- Data for Name: urls; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.urls VALUES (2, 'https://google.com.br/', 'p_LGiHXn', 0, 1, '2023-02-26 12:31:17.570461');
-INSERT INTO public.urls VALUES (4, 'https://google.com.br/', 'fhCjfPBd', 0, 1, '2023-02-26 12:31:19.02643');
-INSERT INTO public.urls VALUES (1, 'https://google.com.br/', 'LclrOoV5', 2, 1, '2023-02-26 12:31:16.808172');
-INSERT INTO public.urls VALUES (3, 'https://google.com.br/', 'OUe9DDwT', 3, 1, '2023-02-26 12:31:18.228335');
 
 
 --
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.users VALUES (1, 'jose', 'jose@driven.com.br', '$2b$10$Cev4z9IpbyBTJpKk57aHDeMWGtqcnXcj7wo3qwQfH18VmR7j4KszC', '2023-02-26 11:51:20.999164');
-INSERT INTO public.users VALUES (2, 'maria', 'maria@driven.com.br', '$2b$10$6IlTqnNqCDWiKxxaB1GAzudA3RVeNhKVzcoAS.WPqGDw7U0ShCUVu', '2023-02-26 13:06:57.813039');
 
 
 --
 -- Name: sessions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.sessions_id_seq', 2, true);
+SELECT pg_catalog.setval('public.sessions_id_seq', 1, false);
 
 
 --
 -- Name: urls_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.urls_id_seq', 4, true);
+SELECT pg_catalog.setval('public.urls_id_seq', 1, false);
 
 
 --
 -- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.users_id_seq', 2, true);
+SELECT pg_catalog.setval('public.users_id_seq', 1, false);
 
 
 --
