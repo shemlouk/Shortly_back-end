@@ -6,7 +6,7 @@ import { Router } from "express";
 
 const router = Router();
 
-router.get("/urls/open/:shortUrl");
+router.get("/urls/open/:shortUrl", findUrl, Urls.openUrl);
 router.post("/urls/shorten", authentication, validateBody, Urls.create);
 router.delete("/urls/:id");
 router.get("/urls/:id", findUrl, Urls.getById);
