@@ -25,6 +25,14 @@ class UrlsController {
     delete data.createdAt;
     res.send(data);
   }
+  async openUrl(req: Request, res: Response) {
+    const { id, url } = res.locals.url;
+    await db.query(
+      'UPDATE urls SET "visitsCount" = "visitsCount" + 1 WHERE id = $1',
+      [id]
+    );
+    res.redirect(url);
+  }
 }
 
 export default new UrlsController();
