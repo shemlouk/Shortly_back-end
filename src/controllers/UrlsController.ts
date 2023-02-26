@@ -1,6 +1,8 @@
+import { customAlphabet, urlAlphabet } from "nanoid";
 import { Request, Response } from "express";
 import db from "../config/database";
-import { nanoid } from "nanoid";
+
+const nanoid = customAlphabet(urlAlphabet, 8);
 
 class UrlsController {
   async create(req: Request, res: Response) {
