@@ -15,6 +15,12 @@ class Schemas {
         path: ["confirmPassword"],
       });
   }
+  signin() {
+    return z.object({
+      email: z.string().email(),
+      password: z.string().min(1),
+    });
+  }
 }
 
 export default new Schemas();
