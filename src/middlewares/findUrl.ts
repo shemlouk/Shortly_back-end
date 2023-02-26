@@ -9,7 +9,7 @@ const findUrl = async (req: Request, res: Response, next: NextFunction) => {
       [id, shortUrl]
     );
     if (!rowCount) return res.sendStatus(404);
-    res.locals = { url: rows[0] };
+    res.locals.url = rows[0];
     next();
   } catch ({ message }) {
     console.log(message);

@@ -8,11 +8,12 @@ const authentication = async (
 ) => {
   const token = req.header("authorization")?.replace(/(Bearer )/g, "");
   try {
-    const { rowCount } = await db.query(
+    const { rows, rowCount } = await db.query(
       "SELECT * FROM sessions WHERE token = $1",
       [token]
     );
     if (!rowCount) return res.sendStatus(401);
+    res.locals.session = rows[0];
     next();
   } catch ({ message }) {
     console.log(message);
