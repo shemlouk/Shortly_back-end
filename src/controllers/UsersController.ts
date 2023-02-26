@@ -6,13 +6,8 @@ const SALT_ROUNDS = 10;
 
 class UserController {
   async create(req: Request, res: Response) {
+    const { name, email, password } = req.body;
     try {
-      const { name, email, password } = req.body;
-      const { rowCount } = await db.query(
-        "SELECT * FROM users WHERE email = $1",
-        [email]
-      );
-      if (rowCount) return res.sendStatus(409);
       const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
       await db.query(
         "INSERT INTO users (name, email, password) VALUES ($1, $2, $3)",
