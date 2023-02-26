@@ -35,6 +35,18 @@ class UrlsController {
     );
     res.redirect(url);
   }
+  async delete(req: Request, res: Response) {
+    const {
+      url: { id },
+      session: { userId },
+    } = res.locals;
+    const { rowCount } = await db.query(
+      'DELETE FROM urls WHERE id = $1 AND "userId" = $2',
+      [id, userId]
+    );
+    if (!rowCount) return res.sendStatus(401);
+    res.sendStatus(204);
+  }
 }
 
 export default new UrlsController();
