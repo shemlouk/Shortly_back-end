@@ -3,56 +3,6 @@ import express from "express";
 import dotenv2 from "dotenv";
 import cors from "cors";
 
-// src/routes/Ranking.ts
-import { Router } from "express";
-var router = Router();
-router.get("/ranking");
-var Ranking_default = router;
-
-// src/schemas/index.ts
-import { z } from "zod";
-var Schemas = class {
-  signup() {
-    return z.object({
-      name: z.string().min(2).max(50),
-      email: z.string().email(),
-      password: z.string().min(6).max(16),
-      confirmPassword: z.string()
-    }).refine(({ password, confirmPassword }) => password === confirmPassword, {
-      message: "Passwords don't match",
-      path: ["confirmPassword"]
-    });
-  }
-  signin() {
-    return z.object({
-      email: z.string().email(),
-      password: z.string().min(1)
-    });
-  }
-  urls() {
-    return z.object({
-      url: z.string().url()
-    });
-  }
-};
-var schemas_default = new Schemas();
-
-// src/middlewares/validateBody.ts
-var validateBody = (req, res, next) => {
-  const route = req.path.split("/")[1];
-  const schema = schemas_default[route];
-  try {
-    const parse = schema().safeParse(req.body);
-    if (!parse.success)
-      return res.status(422).send(parse.error.issues);
-    next();
-  } catch ({ message }) {
-    console.log(message);
-    res.status(500).json(message);
-  }
-};
-var validateBody_default = validateBody;
-
 // src/config/database.ts
 import dotenv from "dotenv";
 import pg from "pg";
@@ -114,8 +64,80 @@ var UserController = class {
       res.status(500).json(message);
     }
   }
+  async getRanking(req, res) {
+    try {
+      const { rows } = await database_default.query(
+        `SELECT
+          users.id,
+          users.name,
+          count(urls.id) AS "linksCount",
+          COALESCE(sum(urls."visitCount"), 0) AS "visitCount"
+        FROM users
+        LEFT JOIN urls
+          ON urls."userId" = users.id
+        GROUP BY users.id
+        ORDER BY "visitCount" DESC
+        LIMIT 10
+      `
+      );
+      res.send(rows);
+    } catch ({ message }) {
+      console.log(message);
+      res.status(500).json(message);
+    }
+  }
 };
 var UsersController_default = new UserController();
+
+// src/routes/Ranking.ts
+import { Router } from "express";
+var router = Router();
+router.get("/ranking", UsersController_default.getRanking);
+var Ranking_default = router;
+
+// src/schemas/index.ts
+import { z } from "zod";
+var Schemas = class {
+  signup() {
+    return z.object({
+      name: z.string().min(2).max(50),
+      email: z.string().email(),
+      password: z.string().min(6).max(16),
+      confirmPassword: z.string()
+    }).refine(({ password, confirmPassword }) => password === confirmPassword, {
+      message: "Passwords don't match",
+      path: ["confirmPassword"]
+    });
+  }
+  signin() {
+    return z.object({
+      email: z.string().email(),
+      password: z.string().min(1)
+    });
+  }
+  urls() {
+    return z.object({
+      url: z.string().url()
+    });
+  }
+};
+var schemas_default = new Schemas();
+
+// src/middlewares/validateBody.ts
+var validateBody = (req, res, next) => {
+  const route = req.path.split("/")[1];
+  const schema = schemas_default[route];
+  try {
+    const parse = schema().safeParse(req.body);
+    if (!parse.success)
+      return res.status(422).send(parse.error.issues);
+    next();
+  } catch ({ message }) {
+    console.log(message);
+    res.status(500).json(message);
+  }
+};
+var validateBody_default = validateBody;
 
 // src/middlewares/findUser.ts
 var findUser = async (req, res, next) => {
