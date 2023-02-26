@@ -21,6 +21,11 @@ class Schemas {
       password: z.string().min(1),
     });
   }
+  urls() {
+    return z.object({
+      url: z.string().url(),
+    });
+  }
 }
 
 export default new Schemas();
