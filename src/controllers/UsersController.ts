@@ -52,6 +52,28 @@ class UserController {
       res.status(500).json(message);
     }
   }
+  async getRanking(req: Request, res: Response) {
+    try {
+      const { rows } = await db.query(
+        `SELECT
+          users.id,
+          users.name,
+          count(urls.id) AS "linksCount",
+          COALESCE(sum(urls."visitCount"), 0) AS "visitCount"
+        FROM users
+        LEFT JOIN urls
+          ON urls."userId" = users.id
+        GROUP BY users.id
+        ORDER BY "visitCount" DESC
+        LIMIT 10
+      `
+      );
+      res.send(rows);
+    } catch ({ message }) {
+      console.log(message);
+      res.status(500).json(message);
+    }
+  }
 }
 
 export default new UserController();
