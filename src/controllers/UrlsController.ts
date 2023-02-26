@@ -23,6 +23,7 @@ class UrlsController {
   async getById(req: Request, res: Response) {
     const data = res.locals.url;
     delete data.createdAt;
+    delete data.visitsCount;
     res.send(data);
   }
   async openUrl(req: Request, res: Response) {
