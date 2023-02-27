@@ -1,5 +1,5 @@
+import repository from "../repositories/SessionRepository";
 import { Request, Response, NextFunction } from "express";
-import db from "../config/database";
 
 const authentication = async (
   req: Request,
@@ -8,12 +8,9 @@ const authentication = async (
 ) => {
   const token = req.header("authorization")?.replace(/(Bearer )/g, "");
   try {
-    const { rows, rowCount } = await db.query(
-      "SELECT * FROM sessions WHERE token = $1",
-      [token]
-    );
-    if (!rowCount) return res.sendStatus(401);
-    res.locals.session = rows[0];
+    const result = await repository.getOne(token);
+    if (!result?.rowCount) return res.sendStatus(401);
+    res.locals.session = result.rows[0];
     next();
   } catch ({ message }) {
     console.log(message);
