@@ -1,20 +1,17 @@
 import { Request, Response, NextFunction } from "express";
-import db from "../config/database";
+import repository from "../repositories/UserRepository";
 
 const findUser = async (req: Request, res: Response, next: NextFunction) => {
   const route = req.path.split("/")[1];
   const { email } = req.body;
   try {
-    const { rows, rowCount } = await db.query(
-      "SELECT * FROM users WHERE email = $1",
-      [email]
-    );
+    const { rows, rowCount } = (await repository.findOne(email)) ?? {};
     if (route === "signup") {
       if (rowCount) return res.sendStatus(409);
       next();
     } else {
       if (!rowCount) return res.sendStatus(401);
-      res.locals = { user: rows[0] };
+      res.locals = { user: rows?.[0] };
       next();
     }
   } catch ({ message }) {
