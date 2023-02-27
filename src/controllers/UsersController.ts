@@ -1,6 +1,6 @@
 import repository from "../repositories/UserRepository";
 import { Request, Response } from "express";
-import bcrypt, { hash } from "bcrypt";
+import bcrypt from "bcrypt";
 
 const SALT_ROUNDS = 10;
 
