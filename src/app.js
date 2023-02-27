@@ -13,26 +13,19 @@ var configDatabase = {
 };
 var database_default = new pg.Pool(configDatabase);
 
-// src/controllers/UsersController.ts
-import bcrypt from "bcrypt";
-var SALT_ROUNDS = 10;
-var UserController = class {
-  async create(req, res) {
-    const { name, email, password } = req.body;
+// src/repositories/UserRepository.ts
+var UserRepository = class {
+  async create(name, email, password) {
     try {
-      const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
       await database_default.query(
         "INSERT INTO users (name, email, password) VALUES ($1, $2, $3)",
-        [name, email, hashedPassword]
+        [name, email, password]
       );
-      res.sendStatus(201);
     } catch ({ message }) {
-      console.log(message);
-      res.status(500).json(message);
+      console.error(message);
     }
   }
-  async getById(req, res) {
-    const { userId } = res.locals.session;
+  async getOne(id) {
     try {
       const { rows } = await database_default.query(
         `SELECT
@@ -56,33 +49,73 @@ var UserController = class {
         ON urls."userId" = users.id
         WHERE users.id = $1
         GROUP BY users.id, users.name`,
-        [userId]
+        [id]
       );
-      res.send(rows[0]);
+      return rows[0];
     } catch ({ message }) {
-      console.log(message);
+      console.error(message);
+    }
+  }
+  async getMany() {
+    try {
+      return (await database_default.query(
+        `SELECT
+            users.id,
+            users.name,
+            count(urls.id) AS "linksCount",
+            COALESCE(sum(urls."visitCount"), 0) AS "visitCount"
+          FROM users
+          LEFT JOIN urls
+            ON urls."userId" = users.id
+          GROUP BY users.id
+          ORDER BY "visitCount" DESC
+          LIMIT 10`
+      )).rows;
+    } catch ({ message }) {
+      console.error(message);
+    }
+  }
+  async findOne(email) {
+    try {
+      return await database_default.query("SELECT * FROM users WHERE email = $1", [email]);
+    } catch ({ message }) {
+      console.error(message);
+    }
+  }
+};
+var UserRepository_default = new UserRepository();
+
+// src/controllers/UsersController.ts
+import bcrypt from "bcrypt";
+var SALT_ROUNDS = 10;
+var UserController = class {
+  async create(req, res) {
+    const { name, email, password } = req.body;
+    try {
+      const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+      await UserRepository_default.create(name, email, hashedPassword);
+      res.sendStatus(201);
+    } catch ({ message }) {
+      console.error(message);
+      res.status(500).json(message);
+    }
+  }
+  async getById(req, res) {
+    const { userId } = res.locals.session;
+    try {
+      const result = await UserRepository_default.getOne(userId);
+      res.send(result);
+    } catch ({ message }) {
+      console.error(message);
       res.status(500).json(message);
     }
   }
   async getRanking(req, res) {
     try {
-      const { rows } = await database_default.query(
-        `SELECT
-          users.id,
-          users.name,
-          count(urls.id) AS "linksCount",
-          COALESCE(sum(urls."visitCount"), 0) AS "visitCount"
-        FROM users
-        LEFT JOIN urls
-          ON urls."userId" = users.id
-        GROUP BY users.id
-        ORDER BY "visitCount" DESC
-        LIMIT 10
-      `
-      );
-      res.send(rows);
+      const result = await UserRepository_default.getMany();
+      res.send(result);
     } catch ({ message }) {
-      console.log(message);
+      console.error(message);
       res.status(500).json(message);
     }
   }
@@ -144,10 +177,7 @@ var findUser = async (req, res, next) => {
   const route = req.path.split("/")[1];
   const { email } = req.body;
   try {
-    const { rows, rowCount } = await database_default.query(
-      "SELECT * FROM users WHERE email = $1",
-      [email]
-    );
+    const { rows, rowCount } = await UserRepository_default.findOne(email) ?? {};
     if (route === "signup") {
       if (rowCount)
         return res.sendStatus(409);
@@ -155,7 +185,7 @@ var findUser = async (req, res, next) => {
     } else {
       if (!rowCount)
         return res.sendStatus(401);
-      res.locals = { user: rows[0] };
+      res.locals = { user: rows?.[0] };
       next();
     }
   } catch ({ message }) {
@@ -171,6 +201,28 @@ var router2 = Router2();
 router2.post("/signup", validateBody_default, findUser_default, UsersController_default.create);
 var SignUp_default = router2;
 
+// src/repositories/SessionRepository.ts
+var SessionRepository = class {
+  async create(id, token) {
+    try {
+      await database_default.query('INSERT INTO sessions ("userId", token) VALUES ($1, $2)', [
+        id,
+        token
+      ]);
+    } catch ({ message }) {
+      console.error(message);
+    }
+  }
+  async getOne(token) {
+    try {
+      return await database_default.query("SELECT * FROM sessions WHERE token = $1", [token]);
+    } catch ({ message }) {
+      console.error(message);
+    }
+  }
+};
+var SessionRepository_default = new SessionRepository();
+
 // src/controllers/SessionsController.ts
 import { nanoid } from "nanoid";
 import bcrypt2 from "bcrypt";
@@ -182,10 +234,7 @@ var SessionsController = class {
       if (!bcrypt2.compareSync(password, userPassword))
         return res.sendStatus(401);
       const token = nanoid();
-      await database_default.query('INSERT INTO sessions ("userId", token) VALUES ($1, $2)', [
-        userId,
-        token
-      ]);
+      await SessionRepository_default.create(userId, token);
       res.send({ token });
     } catch ({ message }) {
       console.log(message);
@@ -205,13 +254,10 @@ var SignIn_default = router3;
 var authentication = async (req, res, next) => {
   const token = req.header("authorization")?.replace(/(Bearer )/g, "");
   try {
-    const { rows, rowCount } = await database_default.query(
-      "SELECT * FROM sessions WHERE token = $1",
-      [token]
-    );
-    if (!rowCount)
+    const result = await SessionRepository_default.getOne(token);
+    if (!result?.rowCount)
       return res.sendStatus(401);
-    res.locals.session = rows[0];
+    res.locals.session = result.rows[0];
     next();
   } catch ({ message }) {
     console.log(message);
@@ -228,6 +274,61 @@ var Users_default = router4;
 
 // src/controllers/UrlsController.ts
 import { customAlphabet, urlAlphabet } from "nanoid";
+
+// src/repositories/UrlRepository.ts
+var UrlRepository = class {
+  async create(url, shortUrl, id) {
+    try {
+      await database_default.query(
+        'INSERT INTO urls (url, "shortUrl", "userId") VALUES ($1, $2, $3)',
+        [url, shortUrl, id]
+      );
+    } catch ({ message }) {
+      console.error(message);
+    }
+  }
+  async getOne(shortUrl) {
+    try {
+      return (await database_default.query('SELECT * FROM urls WHERE "shortUrl" = $1', [shortUrl])).rows[0];
+    } catch ({ message }) {
+      console.error(message);
+    }
+  }
+  async updateVisitCount(id) {
+    try {
+      await database_default.query(
+        'UPDATE urls SET "visitCount" = "visitCount" + 1 WHERE id = $1',
+        [id]
+      );
+    } catch ({ message }) {
+      console.error(message);
+    }
+  }
+  async delete(id, userId) {
+    try {
+      const { rowCount } = await database_default.query(
+        'DELETE FROM urls WHERE id = $1 AND "userId" = $2',
+        [id, userId]
+      );
+      return rowCount;
+    } catch ({ message }) {
+      console.error(message);
+    }
+  }
+  async findOne(id, shortUrl) {
+    try {
+      return await database_default.query(
+        'SELECT * FROM urls WHERE id = $1 OR "shortUrl" = $2',
+        [id, shortUrl]
+      );
+    } catch ({ message }) {
+      console.error(message);
+    }
+  }
+};
+var UrlRepository_default = new UrlRepository();
+
+// src/controllers/UrlsController.ts
 var nanoid2 = customAlphabet(urlAlphabet, 8);
 var UrlsController = class {
   async create(req, res) {
@@ -235,14 +336,11 @@ var UrlsController = class {
     const { url } = req.body;
     const shortUrl = nanoid2();
     try {
-      await database_default.query(
-        'INSERT INTO urls (url, "shortUrl", "userId") VALUES ($1, $2, $3)',
-        [url, shortUrl, userId]
-      );
-      const { id } = (await database_default.query('SELECT id FROM urls WHERE "shortUrl" = $1', [shortUrl])).rows[0];
+      await UrlRepository_default.create(url, shortUrl, userId);
+      const { id } = await UrlRepository_default.getOne(shortUrl);
       res.status(201).send({ id, shortUrl });
     } catch ({ message }) {
-      console.log(message);
+      console.error(message);
       res.status(500).json(message);
     }
   }
@@ -252,10 +350,7 @@ var UrlsController = class {
   }
   async openUrl(req, res) {
     const { id, url } = res.locals.url;
-    await database_default.query(
-      'UPDATE urls SET "visitCount" = "visitCount" + 1 WHERE id = $1',
-      [id]
-    );
+    await UrlRepository_default.updateVisitCount(id);
     res.redirect(url);
   }
   async delete(req, res) {
@@ -263,10 +358,7 @@ var UrlsController = class {
       url: { id },
       session: { userId }
     } = res.locals;
-    const { rowCount } = await database_default.query(
-      'DELETE FROM urls WHERE id = $1 AND "userId" = $2',
-      [id, userId]
-    );
+    const rowCount = await UrlRepository_default.delete(id, userId);
     if (!rowCount)
       return res.sendStatus(401);
     res.sendStatus(204);
@@ -278,13 +370,10 @@ var UrlsController_default = new UrlsController();
 var findUrl = async (req, res, next) => {
   const { id, shortUrl } = req.params;
   try {
-    const { rows, rowCount } = await database_default.query(
-      'SELECT * FROM urls WHERE id = $1 OR "shortUrl" = $2',
-      [id, shortUrl]
-    );
+    const { rows, rowCount } = await UrlRepository_default.findOne(Number(id), shortUrl) ?? {};
     if (!rowCount)
       return res.sendStatus(404);
-    res.locals.url = rows[0];
+    res.locals.url = rows?.[0];
     next();
   } catch ({ message }) {
     console.log(message);
