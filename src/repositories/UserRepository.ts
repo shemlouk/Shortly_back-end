@@ -63,6 +63,13 @@ class UserRepository {
       console.error(message);
     }
   }
+  async findOne(email: string) {
+    try {
+      return await db.query("SELECT * FROM users WHERE email = $1", [email]);
+    } catch ({ message }) {
+      console.error(message);
+    }
+  }
 }
 
 export default new UserRepository();
