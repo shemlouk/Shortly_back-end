@@ -41,7 +41,7 @@ class UrlRepository {
       console.error(message);
     }
   }
-  async findOne(id: number, shortUrl: string) {
+  async findOne(id: string, shortUrl: string) {
     try {
       return await db.query(
         'SELECT * FROM urls WHERE id = $1 OR "shortUrl" = $2',

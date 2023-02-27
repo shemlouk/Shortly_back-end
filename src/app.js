@@ -370,7 +370,7 @@ var UrlsController_default = new UrlsController();
 var findUrl = async (req, res, next) => {
   const { id, shortUrl } = req.params;
   try {
-    const { rows, rowCount } = await UrlRepository_default.findOne(Number(id), shortUrl) ?? {};
+    const { rows, rowCount } = await UrlRepository_default.findOne(id, shortUrl) ?? {};
     if (!rowCount)
       return res.sendStatus(404);
     res.locals.url = rows?.[0];

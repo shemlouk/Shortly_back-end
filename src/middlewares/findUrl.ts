@@ -5,7 +5,7 @@ const findUrl = async (req: Request, res: Response, next: NextFunction) => {
   const { id, shortUrl } = req.params;
   try {
     const { rows, rowCount } =
-      (await repository.findOne(Number(id), shortUrl)) ?? {};
+      (await repository.findOne(id, shortUrl)) ?? {};
     if (!rowCount) return res.sendStatus(404);
     res.locals.url = rows?.[0];
     next();
